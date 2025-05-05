@@ -1,0 +1,175 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["b2b", "public"]
+}
+
+model Customer {
+  id             String           @id @db.VarChar(26)
+  firstName      String?
+  lastName       String?
+  email          String?
+  image_url      String?
+  password       String?
+  CustomerOrders CustomerOrders[]
+
+  @@schema("public")
+}
+
+model CustomerOrders {
+  id          String   @id @db.VarChar(26)
+  orderId     String   @db.VarChar(26)
+  customerId  String   @db.VarChar(26)
+  accepted    Boolean?
+  initiatedBy Boolean?
+  Customer    Customer @relation(fields: [customerId], references: [id])
+  Orders      Orders   @relation(fields: [orderId], references: [id])
+
+  @@schema("public")
+}
+
+model Equipment {
+  id             String           @id @db.VarChar(26)
+  workingHoursId String           @db.VarChar(26)
+  hourRateId     String           @db.VarChar(26)
+  rentalObjectId String           @db.VarChar(26)
+  name           String?
+  description    String?
+  image_url      String?
+  phone          String?
+  address        String?
+  state          String?
+  HourRates      HourRates        @relation(fields: [hourRateId], references: [id])
+  RentalObjects  RentalObjects    @relation(fields: [rentalObjectId], references: [id])
+  WorkingHours   WorkingHours     @relation(fields: [workingHoursId], references: [id])
+  OrderEquipment OrderEquipment[]
+
+  @@schema("public")
+}
+
+model HourRates {
+  id            String          @id @db.VarChar(26)
+  type          String?
+  sunday        Float?
+  monday        Float?
+  tuesday       Float?
+  wednesday     Float?
+  thursday      Float?
+  friday        Float?
+  saturday      Float?
+  updatedAt     DateTime?       @db.Timestamp(6)
+  Equipment     Equipment[]
+  Personnel     Personnel[]
+  RentalObjects RentalObjects[]
+
+  @@schema("public")
+}
+
+model OrderEquipment {
+  orderId     String    @db.VarChar(26)
+  equipmentId String    @db.VarChar(26)
+  Equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  Orders      Orders    @relation(fields: [orderId], references: [id])
+
+  @@id([orderId, equipmentId])
+  @@schema("public")
+}
+
+model OrderPersonnel {
+  orderId     String    @db.VarChar(26)
+  personnelId String    @db.VarChar(26)
+  Orders      Orders    @relation(fields: [orderId], references: [id])
+  Personnel   Personnel @relation(fields: [personnelId], references: [id])
+
+  @@id([orderId, personnelId])
+  @@schema("public")
+}
+
+model Orders {
+  id             String           @id @db.VarChar(26)
+  start          DateTime         @db.Timestamp(6)
+  end            DateTime         @db.Timestamp(6)
+  rentalObjectId String           @db.VarChar(26)
+  CustomerOrders CustomerOrders[]
+  OrderEquipment OrderEquipment[]
+  OrderPersonnel OrderPersonnel[]
+  RentalObjects  RentalObjects    @relation(fields: [rentalObjectId], references: [id])
+
+  @@schema("public")
+}
+
+model Organizations {
+  id            String          @id @db.VarChar(26)
+  name          String?
+  description   String?
+  site_url      String?
+  image_url     String?
+  phone         String?
+  address       String?
+  updatedAt     DateTime?       @db.Timestamp(6)
+  RentalObjects RentalObjects[]
+
+  @@schema("public")
+}
+
+model Personnel {
+  id             String           @id @db.VarChar(26)
+  workingHoursId String           @db.VarChar(26)
+  hourRateId     String           @db.VarChar(26)
+  rentalObjectId String           @db.VarChar(26)
+  firstName      String?
+  lastName       String?
+  phone          String?
+  description    String?
+  image_url      String?
+  hired_at       DateTime?        @db.Timestamp(6)
+  OrderPersonnel OrderPersonnel[]
+  HourRates      HourRates        @relation(fields: [hourRateId], references: [id])
+  RentalObjects  RentalObjects    @relation(fields: [rentalObjectId], references: [id])
+  WorkingHours   WorkingHours     @relation(fields: [workingHoursId], references: [id])
+
+  @@schema("public")
+}
+
+model RentalObjects {
+  id             String        @id @db.VarChar(26)
+  workingHoursId String        @db.VarChar(26)
+  hourRateId     String        @db.VarChar(26)
+  organizationId String        @db.VarChar(26)
+  name           String?
+  description    String?
+  image_url      String?
+  phone          String?
+  address        String?
+  Equipment      Equipment[]
+  Orders         Orders[]
+  Personnel      Personnel[]
+  HourRates      HourRates     @relation(fields: [hourRateId], references: [id])
+  Organizations  Organizations @relation(fields: [organizationId], references: [id])
+  WorkingHours   WorkingHours  @relation(fields: [workingHoursId], references: [id])
+
+  @@schema("public")
+}
+
+model WorkingHours {
+  id            String          @id @db.VarChar(26)
+  type          String?
+  sunday        Json?
+  monday        Json?
+  tuesday       Json?
+  wednesday     Json?
+  thursday      Json?
+  friday        Json?
+  saturday      Json?
+  updatedAt     DateTime?       @db.Timestamp(6)
+  Equipment     Equipment[]
+  Personnel     Personnel[]
+  RentalObjects RentalObjects[]
+
+  @@schema("public")
+}
