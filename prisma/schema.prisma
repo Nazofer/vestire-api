@@ -10,25 +10,25 @@ datasource db {
 }
 
 model Customer {
-  id             String           @id @db.VarChar(26)
-  firstName      String?
-  lastName       String?
-  email          String?
-  image_url      String?
-  password       String?
-  CustomerOrders CustomerOrders[]
+  id            String          @id @db.VarChar(26)
+  firstName     String?
+  lastName      String?
+  email         String?
+  imageUrl      String?
+  password      String?
+  CustomerOrder CustomerOrder[]
 
   @@schema("public")
 }
 
-model CustomerOrders {
+model CustomerOrder {
   id          String   @id @db.VarChar(26)
   orderId     String   @db.VarChar(26)
   customerId  String   @db.VarChar(26)
   accepted    Boolean?
   initiatedBy Boolean?
   Customer    Customer @relation(fields: [customerId], references: [id])
-  Orders      Orders   @relation(fields: [orderId], references: [id])
+  Order       Order    @relation(fields: [orderId], references: [id])
 
   @@schema("public")
 }
@@ -40,12 +40,12 @@ model Equipment {
   rentalObjectId String           @db.VarChar(26)
   name           String?
   description    String?
-  image_url      String?
+  imageUrl       String?
   phone          String?
   address        String?
   state          String?
   HourRates      HourRates        @relation(fields: [hourRateId], references: [id])
-  RentalObjects  RentalObjects    @relation(fields: [rentalObjectId], references: [id])
+  RentalObject   RentalObject     @relation(fields: [rentalObjectId], references: [id])
   WorkingHours   WorkingHours     @relation(fields: [workingHoursId], references: [id])
   OrderEquipment OrderEquipment[]
 
@@ -53,19 +53,19 @@ model Equipment {
 }
 
 model HourRates {
-  id            String          @id @db.VarChar(26)
-  type          String?
-  sunday        Float?
-  monday        Float?
-  tuesday       Float?
-  wednesday     Float?
-  thursday      Float?
-  friday        Float?
-  saturday      Float?
-  updatedAt     DateTime?       @db.Timestamp(6)
-  Equipment     Equipment[]
-  Personnel     Personnel[]
-  RentalObjects RentalObjects[]
+  id           String         @id @db.VarChar(26)
+  type         String?
+  sunday       Float?
+  monday       Float?
+  tuesday      Float?
+  wednesday    Float?
+  thursday     Float?
+  friday       Float?
+  saturday     Float?
+  updatedAt    DateTime?      @db.Timestamp(6)
+  Equipment    Equipment[]
+  Personal     Personal[]
+  RentalObject RentalObject[]
 
   @@schema("public")
 }
@@ -74,102 +74,196 @@ model OrderEquipment {
   orderId     String    @db.VarChar(26)
   equipmentId String    @db.VarChar(26)
   Equipment   Equipment @relation(fields: [equipmentId], references: [id])
-  Orders      Orders    @relation(fields: [orderId], references: [id])
+  Order       Order     @relation(fields: [orderId], references: [id])
 
   @@id([orderId, equipmentId])
   @@schema("public")
 }
 
-model OrderPersonnel {
-  orderId     String    @db.VarChar(26)
-  personnelId String    @db.VarChar(26)
-  Orders      Orders    @relation(fields: [orderId], references: [id])
-  Personnel   Personnel @relation(fields: [personnelId], references: [id])
+model OrderPersonal {
+  orderId    String   @db.VarChar(26)
+  personalId String   @db.VarChar(26)
+  Order      Order    @relation(fields: [orderId], references: [id])
+  Personal   Personal @relation(fields: [personalId], references: [id])
 
-  @@id([orderId, personnelId])
+  @@id([orderId, personalId])
   @@schema("public")
 }
 
-model Orders {
+model Order {
   id             String           @id @db.VarChar(26)
   start          DateTime         @db.Timestamp(6)
   end            DateTime         @db.Timestamp(6)
   rentalObjectId String           @db.VarChar(26)
-  CustomerOrders CustomerOrders[]
+  CustomerOrder  CustomerOrder[]
   OrderEquipment OrderEquipment[]
-  OrderPersonnel OrderPersonnel[]
-  RentalObjects  RentalObjects    @relation(fields: [rentalObjectId], references: [id])
+  OrderPersonal  OrderPersonal[]
+  RentalObject   RentalObject     @relation(fields: [rentalObjectId], references: [id])
 
   @@schema("public")
 }
 
-model Organizations {
-  id            String          @id @db.VarChar(26)
-  name          String?
-  description   String?
-  site_url      String?
-  image_url     String?
-  phone         String?
-  address       String?
-  updatedAt     DateTime?       @db.Timestamp(6)
-  RentalObjects RentalObjects[]
+model Organization {
+  id           String         @id @db.VarChar(26)
+  name         String?
+  description  String?
+  siteUrl      String?
+  imageUrl     String?
+  phone        String?
+  address      String?
+  updatedAt    DateTime?      @db.Timestamp(6)
+  RentalObject RentalObject[]
 
   @@schema("public")
 }
 
-model Personnel {
-  id             String           @id @db.VarChar(26)
-  workingHoursId String           @db.VarChar(26)
-  hourRateId     String           @db.VarChar(26)
-  rentalObjectId String           @db.VarChar(26)
+model Personal {
+  id             String          @id @db.VarChar(26)
+  workingHoursId String          @db.VarChar(26)
+  hourRateId     String          @db.VarChar(26)
+  rentalObjectId String          @db.VarChar(26)
   firstName      String?
   lastName       String?
   phone          String?
   description    String?
-  image_url      String?
-  hired_at       DateTime?        @db.Timestamp(6)
-  OrderPersonnel OrderPersonnel[]
-  HourRates      HourRates        @relation(fields: [hourRateId], references: [id])
-  RentalObjects  RentalObjects    @relation(fields: [rentalObjectId], references: [id])
-  WorkingHours   WorkingHours     @relation(fields: [workingHoursId], references: [id])
+  imageUrl       String?
+  hiredAt        DateTime?       @db.Timestamp(6)
+  OrderPersonal  OrderPersonal[]
+  HourRates      HourRates       @relation(fields: [hourRateId], references: [id])
+  RentalObject   RentalObject    @relation(fields: [rentalObjectId], references: [id])
+  WorkingHours   WorkingHours    @relation(fields: [workingHoursId], references: [id])
 
   @@schema("public")
 }
 
-model RentalObjects {
-  id             String        @id @db.VarChar(26)
-  workingHoursId String        @db.VarChar(26)
-  hourRateId     String        @db.VarChar(26)
-  organizationId String        @db.VarChar(26)
+model RentalObject {
+  id             String       @id @db.VarChar(26)
+  workingHoursId String       @db.VarChar(26)
+  hourRateId     String       @db.VarChar(26)
+  organizationId String       @db.VarChar(26)
   name           String?
   description    String?
-  image_url      String?
+  imageUrl       String?
   phone          String?
   address        String?
   Equipment      Equipment[]
-  Orders         Orders[]
-  Personnel      Personnel[]
-  HourRates      HourRates     @relation(fields: [hourRateId], references: [id])
-  Organizations  Organizations @relation(fields: [organizationId], references: [id])
-  WorkingHours   WorkingHours  @relation(fields: [workingHoursId], references: [id])
+  Order          Order[]
+  Personal       Personal[]
+  HourRates      HourRates    @relation(fields: [hourRateId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+  WorkingHours   WorkingHours @relation(fields: [workingHoursId], references: [id])
 
   @@schema("public")
 }
 
 model WorkingHours {
-  id            String          @id @db.VarChar(26)
-  type          String?
-  sunday        Json?
-  monday        Json?
-  tuesday       Json?
-  wednesday     Json?
-  thursday      Json?
-  friday        Json?
-  saturday      Json?
-  updatedAt     DateTime?       @db.Timestamp(6)
-  Equipment     Equipment[]
-  Personnel     Personnel[]
-  RentalObjects RentalObjects[]
+  id           String         @id @db.VarChar(26)
+  type         String?
+  sunday       Json?
+  monday       Json?
+  tuesday      Json?
+  wednesday    Json?
+  thursday     Json?
+  friday       Json?
+  saturday     Json?
+  updatedAt    DateTime?      @db.Timestamp(6)
+  Equipment    Equipment[]
+  Personal     Personal[]
+  RentalObject RentalObject[]
 
   @@schema("public")
+}
+
+model B2BClient {
+  id          String   @id @db.VarChar(26)
+  firstName   String
+  lastName    String
+  phone       String
+  siteUrl     String?
+  imageUrl    String?
+  description String?  @db.Text
+  account     Account? @relation(fields: [accountId], references: [id])
+  accountId   String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@schema("b2b")
+}
+
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  BLOCKED
+  DELETED
+
+  @@schema("b2b")
+}
+
+enum RoleType {
+  ADMIN
+  B2B_CLIENT
+
+  @@schema("b2b")
+}
+
+model Role {
+  id             String           @id @db.VarChar(26)
+  type           RoleType
+  name           String
+  description    String?
+  account        Account?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  RolePermission RolePermission[]
+
+  @@schema("b2b")
+}
+
+model Permission {
+  id             String           @id @db.VarChar(26)
+  name           String           @unique
+  description    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  RolePermission RolePermission[]
+
+  @@schema("b2b")
+}
+
+model RolePermission {
+  id           String     @id @db.VarChar(26)
+  roleId       String     @db.VarChar(26)
+  permissionId String     @db.VarChar(26)
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([roleId, permissionId])
+  @@schema("b2b")
+}
+
+model Account {
+  id          String        @id @db.VarChar(26)
+  email       String        @unique
+  password    String?       @db.VarChar(255)
+  status      AccountStatus @default(PENDING)
+  user        B2BClient?
+  b2bPersonal B2BPersonal?
+  role        Role?         @relation(fields: [roleId], references: [id])
+  roleId      String?       @unique
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@schema("b2b")
+}
+
+model B2BPersonal {
+  id        String   @id @db.VarChar(26)
+  account   Account? @relation(fields: [accountId], references: [id])
+  accountId String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@schema("b2b")
 }
