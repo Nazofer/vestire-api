@@ -1,10 +1,11 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Account, AccountStatus, RoleType } from '@prisma/client';
+import { AccountStatus, RoleType } from '@prisma/client';
 import { UpdateAccountDto } from './dto/update.account.dto';
 import * as bcrypt from 'bcrypt';
 import { ulid } from 'ulid';
 import { RoleService } from '@/role/role.service';
+import { Account } from './entities/account.entity';
 
 @Injectable()
 export class AccountService {
@@ -20,6 +21,9 @@ export class AccountService {
   async findOne(id: string): Promise<Account | null> {
     return await this.prisma.account.findUnique({
       where: { id },
+      include: {
+        role: true,
+      },
     });
   }
 
@@ -49,6 +53,9 @@ export class AccountService {
         status: AccountStatus.ACTIVE,
         roleId: adminRole.id,
       },
+      include: {
+        role: true,
+      },
     });
   }
 
@@ -68,12 +75,7 @@ export class AccountService {
         OR: [{ id }, { email }],
       },
       include: {
-        user: true,
-        role: {
-          include: {
-            permissions: true,
-          },
-        },
+        role: true,
       },
     });
 
@@ -95,6 +97,9 @@ export class AccountService {
     return await this.prisma.account.update({
       where: { id },
       data: updateAccountDto,
+      include: {
+        role: true,
+      },
     });
   }
 }

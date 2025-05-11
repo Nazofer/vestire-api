@@ -1,6 +1,10 @@
-import { PartialType } from '@nestjs/mapped-types';
 import { UserDto } from './user.dto';
+import { ApiProperty, PartialType } from '@nestjs/swagger';
 
 export class UpdateUserDto extends PartialType(UserDto) {
-  image: string;
+  @ApiProperty({
+    description: 'Зображення користувача',
+    example: 'base64-encoded-image-string',
+  })
+  imageUrl: string;
 }

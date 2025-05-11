@@ -28,7 +28,7 @@ export class AuthService {
       await this.accountService.createSuperUserAccount(email, password);
     }
 
-    const account: Account = await this.accountService.getAccount({
+    const account = await this.accountService.getAccount({
       email,
     });
 
@@ -44,7 +44,7 @@ export class AuthService {
       throw new UnauthorizedException('Wrong password');
     }
 
-    const payload: JwtPayload = {
+    const payload = {
       id: account.id,
       email: account.email,
     };
@@ -64,7 +64,7 @@ export class AuthService {
   }
 
   private async generateToken(
-    payload: JwtPayload,
+    payload: Omit<JwtPayload, 'account'>,
     secret: string,
     expiresIn: number,
   ): Promise<string> {
@@ -74,20 +74,10 @@ export class AuthService {
     });
   }
 
-  async generateVerifyToken(payload: JwtPayload): Promise<string> {
+  async generateVerifyToken(
+    payload: Omit<JwtPayload, 'account'>,
+  ): Promise<string> {
     return this.generateToken(payload, process.env.VERIFY_SECRET, 60 * 60);
-  }
-
-  async confirmPassword(confirmPasswordDto: ConfirmPasswordDto): Promise<void> {
-    const { id, password } = confirmPasswordDto;
-    const account = await this.accountService.findOne(id);
-
-    if (!account) {
-      throw new NotFoundException('Account not found');
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    await this.accountService.update(id, { password: hashedPassword });
   }
 
   async getAccount(id: string): Promise<Account> {
@@ -99,7 +89,7 @@ export class AuthService {
   }
 
   async verify(body: ConfirmPasswordDto, payload: JwtPayload) {
-    const account = await this.accountService.findOne(payload.id);
+    const { account, ...rest } = payload;
     if (!account) {
       throw new NotFoundException('Account not found');
     }
@@ -111,8 +101,8 @@ export class AuthService {
     });
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.generateToken(payload, process.env.SECRET, 60 * 15),
-      this.generateToken(payload, process.env.REFRESH_SECRET, 60 * 60),
+      this.generateToken(rest, process.env.SECRET, 60 * 15),
+      this.generateToken(rest, process.env.REFRESH_SECRET, 60 * 60),
     ]);
 
     delete updatedAccount.password;
@@ -120,7 +110,7 @@ export class AuthService {
     return { accessToken, refreshToken, account: updatedAccount };
   }
 
-  async refresh(payload: JwtPayload): Promise<AuthDto> {
+  async refresh(payload: Omit<JwtPayload, 'account'>): Promise<AuthDto> {
     const account = await this.accountService.findOne(payload.id);
     if (!account) {
       throw new NotFoundException('Account not found');

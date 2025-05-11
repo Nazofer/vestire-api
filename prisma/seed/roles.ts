@@ -10,7 +10,7 @@ const roles = [
   },
   {
     id: ulid(),
-    name: RoleType.USER,
+    name: RoleType.OWNER,
     description: 'Regular user with limited access',
     permissions: [
       // Organization permissions

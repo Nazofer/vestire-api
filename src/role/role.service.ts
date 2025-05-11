@@ -12,14 +12,6 @@ import RoleDto from './dto/create-role.dto';
 export class RoleService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(): Promise<Role[]> {
-    return await this.prisma.role.findMany({
-      include: {
-        permissions: true,
-      },
-    });
-  }
-
   async getByName(name: string): Promise<Role> {
     const role = await this.prisma.role.findUnique({
       where: { name: name as RoleType },

@@ -14,13 +14,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { JwtPayload } from '@/auth/types/jwt-payload.interface';
 import { render } from 'mustache';
 
-export const actions = [
-  'read',
-  'manage',
-  'create',
-  'update',
-  'delete',
-] as const;
+export const actions = ['manage', 'create'] as const;
 export const subjects = [
   'organization',
   'trainer',
@@ -33,7 +27,7 @@ export const subjects = [
   'all',
 ] as const;
 
-// type Action = (typeof actions)[number];
+type Action = (typeof actions)[number];
 type Subject = (typeof subjects)[number];
 
 @Injectable()
@@ -79,12 +73,12 @@ export class AbilitiesGuard implements CanActivate {
         });
       },
       client: async (id: string) => {
-        return await this.prisma.b2BClient.findUnique({
+        return await this.prisma.owner.findUnique({
           where: { id },
         });
       },
       user: async (id: string) => {
-        return await this.prisma.b2BClient.findUnique({
+        return await this.prisma.owner.findUnique({
           where: { id },
         });
       },
@@ -95,20 +89,23 @@ export class AbilitiesGuard implements CanActivate {
       throw new NotFoundException(`Subject ${subject} not found`);
     }
 
-    try {
-      const result = await query(id);
-      if (!result) {
-        throw new NotFoundException(`${subject} with id ${id} not found`);
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return result;
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
+    const result = await query(id);
+    if (!result) {
       throw new NotFoundException(`${subject} with id ${id} not found`);
     }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return result;
+  }
+
+  // Map controller decorator actions to our simplified permission model
+  private mapActionToPermission(action: string): Action {
+    // Map read/update/delete to 'manage'
+    if (['read', 'update', 'delete'].includes(action)) {
+      return 'manage';
+    }
+    // Keep 'create' and 'manage' as is
+    return action as Action;
   }
 
   private parseCondition(permission: any, user: JwtPayload) {
@@ -139,13 +136,13 @@ export class AbilitiesGuard implements CanActivate {
     const user = request.user as JwtPayload;
 
     if (!user?.id) {
-      throw new ForbiddenException('Користувач не авторизований');
+      throw new ForbiddenException('User not authenticated');
     }
 
     const account = await this.prisma.account.findUnique({
       where: { id: user.id },
       include: {
-        user: true,
+        owner: true,
         role: {
           include: {
             permissions: true,
@@ -155,10 +152,10 @@ export class AbilitiesGuard implements CanActivate {
     });
 
     if (!account?.role) {
-      throw new ForbiddenException('У користувача немає ролі');
+      throw new ForbiddenException('User has no role assigned');
     }
 
-    // Перевіряємо дозвіл на керування всім
+    // Check for admin 'manage all' permission first
     const hasManageAll = account.role.permissions.some(
       (permission) =>
         permission.action === 'manage' && permission.subject === 'all',
@@ -168,46 +165,57 @@ export class AbilitiesGuard implements CanActivate {
       return true;
     }
 
-    // Перевіряємо кожен необхідний дозвіл
+    // Check each required rule
     for (const rule of rules) {
-      const hasPermission = account.role.permissions.some((permission) => {
-        if (
-          permission.action !== rule.action ||
-          permission.subject !== rule.subject
-        ) {
-          return false;
-        }
+      // Map rule action to our simplified permission model
+      const requiredAction = this.mapActionToPermission(rule.action);
 
-        // Якщо є умови, перевіряємо їх
-        if (permission.conditions) {
+      const hasPermission = await Promise.all(
+        account.role.permissions.map(async (permission) => {
+          // Check if action and subject match
+          if (
+            permission.action !== requiredAction ||
+            permission.subject !== rule.subject
+          ) {
+            return false;
+          }
+
+          // If no conditions needed or no conditions on the permission, we're done
+          if (!rule.conditions || !permission.conditions) {
+            return true;
+          }
+
+          // If conditions are required, check them
           const parsedConditions = this.parseCondition(permission, user);
           const subjectId = request.params.id || request.query.organizationId;
 
           if (subjectId) {
-            return this.getObject(rule.subject as Subject, subjectId).then(
-              (subject) => {
-                return Object.entries(parsedConditions).every(
-                  ([key, value]) => {
-                    if (key === 'userId') {
-                      return (
-                        value === subject.userId ||
-                        value === subject.Organization?.userId
-                      );
-                    }
-                    return subject[key] === value;
-                  },
-                );
-              },
-            );
+            try {
+              const subject = await this.getObject(
+                rule.subject as Subject,
+                subjectId,
+              );
+              return Object.entries(parsedConditions).every(([key, value]) => {
+                if (key === 'userId') {
+                  return (
+                    value === subject.userId ||
+                    value === subject.Organization?.userId
+                  );
+                }
+                return subject[key] === value;
+              });
+            } catch {
+              return false;
+            }
           }
-        }
 
-        return true;
-      });
+          return true;
+        }),
+      ).then((results) => results.some((result) => result));
 
       if (!hasPermission) {
         throw new ForbiddenException(
-          `Недостатньо прав для виконання дії ${rule.action} над ${rule.subject}`,
+          `Insufficient permissions for ${rule.action} on ${rule.subject}`,
         );
       }
     }

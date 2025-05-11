@@ -5,7 +5,6 @@ import {
   Get,
   Post,
   UseGuards,
-  Param,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -13,23 +12,41 @@ import { AuthService } from './auth.service';
 import SignInDTO from './dto/signin.dto';
 import { AuthGuard } from '@nestjs/passport';
 import ConfirmPasswordDto from './dto/confirm-password.dto';
-import { JwtPayload } from './types/jwt-payload.interface';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import AuthDto from './dto/auth.dto';
+import { RequestWithUser } from './types/jwt-payload.interface';
+import { Account } from '@/account/entities/account.entity';
 
-export interface RequestWithUser extends Request {
-  user: JwtPayload;
-}
-
+@ApiTags('Авторизація')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
+  @ApiOperation({ summary: 'Вхід в систему' })
+  @ApiResponse({
+    status: 201,
+    description: 'Успішний вхід в систему',
+    type: AuthDto,
+  })
   @HttpCode(HttpStatus.CREATED)
   login(@Body() signInDTO: SignInDTO) {
     return this.authService.login(signInDTO);
   }
 
   @Post('refresh')
+  @ApiOperation({ summary: 'Оновлення токенів доступу' })
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 201,
+    description: 'Токени успішно оновлено',
+    type: AuthDto,
+  })
   @UseGuards(AuthGuard('jwt-refresh'))
   @HttpCode(HttpStatus.CREATED)
   refresh(@Request() req: RequestWithUser) {
@@ -37,6 +54,13 @@ export class AuthController {
   }
 
   @Post('verify')
+  @ApiOperation({ summary: 'Підтвердження облікового запису' })
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 201,
+    description: 'Обліковий запис успішно підтверджено',
+    type: AuthDto,
+  })
   @UseGuards(AuthGuard('jwt-verify'))
   @HttpCode(HttpStatus.CREATED)
   verify(
@@ -46,9 +70,16 @@ export class AuthController {
     return this.authService.verify(confirmPasswordDto, req.user);
   }
 
-  @Get('account/:id')
+  @Get('account')
+  @ApiOperation({ summary: 'Отримання інформації про акаунт' })
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Інформацію про акаунт успішно отримано',
+    type: Account,
+  })
   @UseGuards(AuthGuard('jwt'))
-  getAccount(@Param('id') id: string) {
-    return this.authService.getAccount(id);
+  getAccount(@Request() req: RequestWithUser) {
+    return this.authService.getAccount(req.user.id);
   }
 }
