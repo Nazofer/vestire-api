@@ -1,12 +1,10 @@
 import { PrismaClient } from '@prisma/client';
-import { seedPermissions } from './permissions';
 import { seedRoles } from './roles';
 
 const prisma = new PrismaClient();
 
 async function main() {
   try {
-    await seedPermissions(prisma);
     await seedRoles(prisma);
   } catch (error) {
     console.error('Error seeding database:', error);

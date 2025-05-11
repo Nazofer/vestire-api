@@ -4,10 +4,14 @@ import { Account, AccountStatus, RoleType } from '@prisma/client';
 import { UpdateAccountDto } from './dto/update.account.dto';
 import * as bcrypt from 'bcrypt';
 import { ulid } from 'ulid';
+import { RoleService } from '@/role/role.service';
 
 @Injectable()
 export class AccountService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly roleService: RoleService,
+  ) {}
 
   async getCount(): Promise<number> {
     return await this.prisma.account.count();
@@ -35,17 +39,8 @@ export class AccountService {
     email: string,
     password: string,
   ): Promise<Account> {
-    // Створюємо роль адміністратора
-    const adminRole = await this.prisma.role.create({
-      data: {
-        id: ulid(),
-        type: RoleType.ADMIN,
-        name: 'Administrator',
-        description: 'System administrator with full access',
-      },
-    });
+    const adminRole = await this.roleService.getByName(RoleType.ADMIN);
 
-    // Створюємо акаунт з роллю адміністратора
     return await this.prisma.account.create({
       data: {
         id: ulid(),
@@ -76,11 +71,7 @@ export class AccountService {
         user: true,
         role: {
           include: {
-            RolePermission: {
-              include: {
-                permission: true,
-              },
-            },
+            permissions: true,
           },
         },
       },

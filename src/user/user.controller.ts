@@ -14,7 +14,8 @@ import { PaginationRequestDto } from './dto/query.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { checkAbilities, AbilitiesGuard } from '../auth/guards/abilities.guard';
+import { AbilitiesGuard } from '@/role/guards/abilities.guard';
+import { CheckAbilities } from '@/role/decorators/abilities.decorator';
 
 @Controller('users')
 @UseGuards(AuthGuard('jwt'), AbilitiesGuard)
@@ -22,31 +23,31 @@ export class UserController {
   constructor(private userService: UserService) {}
 
   @Get()
-  @checkAbilities({ action: 'read', subject: 'profile' })
+  @CheckAbilities({ action: 'manage', subject: 'user' })
   findAll(@Query() queryDto: PaginationRequestDto) {
     return this.userService.findAll(queryDto);
   }
 
   @Post()
-  @checkAbilities({ action: 'create', subject: 'profile' })
+  @CheckAbilities({ action: 'manage', subject: 'user' })
   create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }
 
   @Get(':id')
-  @checkAbilities({ action: 'read', subject: 'profile' })
+  @CheckAbilities({ action: 'manage', subject: 'user' })
   findOne(@Param('id') id: string) {
     return this.userService.findOne(id);
   }
 
   @Patch(':id')
-  @checkAbilities({ action: 'update', subject: 'profile' })
+  @CheckAbilities({ action: 'manage', subject: 'user', conditions: true })
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.userService.update(id, updateUserDto);
   }
 
   @Delete(':id')
-  @checkAbilities({ action: 'delete', subject: 'profile' })
+  @CheckAbilities({ action: 'manage', subject: 'user', conditions: true })
   delete(@Param('id') id: string) {
     return this.userService.remove(id);
   }

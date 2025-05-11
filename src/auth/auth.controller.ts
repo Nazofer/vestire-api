@@ -12,7 +12,6 @@ import {
 import { AuthService } from './auth.service';
 import SignInDTO from './dto/signin.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { checkAbilities, AbilitiesGuard } from './guards/abilities.guard';
 import ConfirmPasswordDto from './dto/confirm-password.dto';
 import { JwtPayload } from './types/jwt-payload.interface';
 
@@ -37,17 +36,18 @@ export class AuthController {
     return this.authService.refresh(req.user);
   }
 
-  @Post('confirm-password')
-  @UseGuards(AuthGuard('jwt'), AbilitiesGuard)
-  @checkAbilities({ action: 'manage', subject: 'profile' })
+  @Post('verify')
+  @UseGuards(AuthGuard('jwt-verify'))
   @HttpCode(HttpStatus.CREATED)
-  confirmPassword(@Body() confirmPasswordDto: ConfirmPasswordDto) {
-    return this.authService.confirmPassword(confirmPasswordDto);
+  verify(
+    @Body() confirmPasswordDto: ConfirmPasswordDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.authService.verify(confirmPasswordDto, req.user);
   }
 
   @Get('account/:id')
-  @UseGuards(AuthGuard('jwt'), AbilitiesGuard)
-  @checkAbilities({ action: 'read', subject: 'profile' })
+  @UseGuards(AuthGuard('jwt'))
   getAccount(@Param('id') id: string) {
     return this.authService.getAccount(id);
   }

@@ -74,6 +74,10 @@ export class AuthService {
     });
   }
 
+  async generateVerifyToken(payload: JwtPayload): Promise<string> {
+    return this.generateToken(payload, process.env.VERIFY_SECRET, 60 * 60);
+  }
+
   async confirmPassword(confirmPasswordDto: ConfirmPasswordDto): Promise<void> {
     const { id, password } = confirmPasswordDto;
     const account = await this.accountService.findOne(id);
@@ -101,7 +105,7 @@ export class AuthService {
     }
 
     const hashedPass = await bcrypt.hash(body.password, 10);
-    await this.accountService.update(payload.id, {
+    const updatedAccount = await this.accountService.update(payload.id, {
       password: hashedPass,
       status: AccountStatus.ACTIVE,
     });
@@ -111,7 +115,6 @@ export class AuthService {
       this.generateToken(payload, process.env.REFRESH_SECRET, 60 * 60),
     ]);
 
-    const updatedAccount = await this.accountService.findOne(payload.id);
     delete updatedAccount.password;
 
     return { accessToken, refreshToken, account: updatedAccount };

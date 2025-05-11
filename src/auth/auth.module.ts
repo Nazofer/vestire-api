@@ -13,5 +13,6 @@ import { RoleModule } from '../role/role.module';
   imports: [JwtModule.register({}), AccountModule, RoleModule],
   controllers: [AuthController],
   providers: [AuthService, RtStrategy, AtStrategy, RstStrategy, VtStrategy],
+  exports: [AuthService],
 })
 export class AuthModule {}

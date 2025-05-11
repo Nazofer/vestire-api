@@ -201,45 +201,33 @@ enum AccountStatus {
 
 enum RoleType {
   ADMIN
-  B2B_CLIENT
+  USER
 
   @@schema("b2b")
 }
 
 model Role {
-  id             String           @id @db.VarChar(26)
-  type           RoleType
-  name           String
-  description    String?
-  account        Account?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  RolePermission RolePermission[]
+  id          String       @id @db.VarChar(26)
+  name        RoleType     @unique
+  description String?
+  permissions Permission[]
+  account     Account?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@schema("b2b")
 }
 
 model Permission {
-  id             String           @id @db.VarChar(26)
-  name           String           @unique
-  description    String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  RolePermission RolePermission[]
+  id         String   @id @db.VarChar(26)
+  action     String
+  subject    String
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId     String   @db.VarChar(26)
+  conditions Json?    @db.JsonB
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@schema("b2b")
-}
-
-model RolePermission {
-  id           String     @id @db.VarChar(26)
-  roleId       String     @db.VarChar(26)
-  permissionId String     @db.VarChar(26)
-  role         Role       @relation(fields: [roleId], references: [id])
-  permission   Permission @relation(fields: [permissionId], references: [id])
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@unique([roleId, permissionId])
   @@schema("b2b")
 }
 

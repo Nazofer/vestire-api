@@ -10,10 +10,15 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { B2BClient, Prisma, RoleType } from '@prisma/client';
 import { PaginationResponseData } from '@/types/pagination';
 import { ulid } from 'ulid';
-
+import { RoleService } from '@/role/role.service';
+import { AuthService } from '@/auth/auth.service';
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly roleService: RoleService,
+    private readonly authService: AuthService,
+  ) {}
 
   async findOne(id: string): Promise<B2BClient> {
     const user = await this.prisma.b2BClient.findUnique({
@@ -21,15 +26,7 @@ export class UserService {
       include: {
         account: {
           include: {
-            role: {
-              include: {
-                RolePermission: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
-            },
+            role: true,
           },
         },
       },
@@ -81,15 +78,7 @@ export class UserService {
         include: {
           account: {
             include: {
-              role: {
-                include: {
-                  RolePermission: {
-                    include: {
-                      permission: true,
-                    },
-                  },
-                },
-              },
+              role: true,
             },
           },
         },
@@ -112,19 +101,12 @@ export class UserService {
     };
   }
 
-  async create(data: CreateUserDto): Promise<B2BClient> {
+  async create(data: CreateUserDto): Promise<{ verifyToken: string }> {
     try {
       const { email, user } = data;
 
-      // Створюємо роль B2B_CLIENT
-      const b2bRole = await this.prisma.role.create({
-        data: {
-          id: ulid(),
-          type: RoleType.B2B_CLIENT,
-          name: 'B2B Client',
-          description: 'B2B client with limited access',
-        },
-      });
+      // Отримуємо роль B2B_CLIENT
+      const b2bRole = await this.roleService.getByName(RoleType.USER);
 
       // Створюємо акаунт з роллю
       const account = await this.prisma.account.create({
@@ -135,7 +117,7 @@ export class UserService {
         },
       });
 
-      return await this.prisma.b2BClient.create({
+      await this.prisma.b2BClient.create({
         data: {
           id: ulid(),
           ...user,
@@ -144,19 +126,18 @@ export class UserService {
         include: {
           account: {
             include: {
-              role: {
-                include: {
-                  RolePermission: {
-                    include: {
-                      permission: true,
-                    },
-                  },
-                },
-              },
+              role: true,
             },
           },
         },
       });
+
+      const verifyToken = await this.authService.generateVerifyToken({
+        id: account.id,
+        email: account.email,
+      });
+
+      return { verifyToken };
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -175,15 +156,7 @@ export class UserService {
         include: {
           account: {
             include: {
-              role: {
-                include: {
-                  RolePermission: {
-                    include: {
-                      permission: true,
-                    },
-                  },
-                },
-              },
+              role: true,
             },
           },
         },

@@ -1,167 +1,90 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Role, RoleType, RolePermission } from '@prisma/client';
+import { Role, RoleType } from '@prisma/client';
 import { ulid } from 'ulid';
+import RoleDto from './dto/create-role.dto';
 
 @Injectable()
 export class RoleService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createRole(data: {
-    type: RoleType;
-    name: string;
-    description?: string;
-  }): Promise<Role> {
+  async findAll(): Promise<Role[]> {
+    return await this.prisma.role.findMany({
+      include: {
+        permissions: true,
+      },
+    });
+  }
+
+  async getByName(name: string): Promise<Role> {
+    const role = await this.prisma.role.findUnique({
+      where: { name: name as RoleType },
+      include: {
+        permissions: true,
+      },
+    });
+
+    if (!role) {
+      throw new ConflictException('A role with the given name does not exist');
+    }
+
+    return role;
+  }
+
+  async findOne(id: string): Promise<Role> {
+    const role = await this.prisma.role.findUnique({
+      where: { id },
+      include: {
+        permissions: true,
+      },
+    });
+
+    if (!role) {
+      throw new ConflictException('A role with the given id does not exist');
+    }
+
+    return role;
+  }
+
+  async create(roleDto: RoleDto): Promise<Role> {
     return await this.prisma.role.create({
       data: {
         id: ulid(),
-        ...data,
+        name: roleDto.name,
+      },
+      include: {
+        permissions: true,
       },
     });
   }
 
-  async getRoles(): Promise<Role[]> {
-    return await this.prisma.role.findMany();
-  }
+  async update(id: string, roleDto: Partial<RoleDto>): Promise<Role> {
+    await this.findOne(id);
 
-  async getRole(id: string): Promise<Role> {
-    return await this.prisma.role.findUniqueOrThrow({
-      where: { id },
-    });
-  }
-
-  async updateRole(
-    id: string,
-    data: { name?: string; description?: string },
-  ): Promise<Role> {
     return await this.prisma.role.update({
       where: { id },
-      data,
-    });
-  }
-
-  async deleteRole(id: string): Promise<Role> {
-    return await this.prisma.role.delete({
-      where: { id },
-    });
-  }
-
-  async assignRoleToAccount(accountId: string, roleId: string): Promise<void> {
-    await this.prisma.account.update({
-      where: { id: accountId },
-      data: { roleId },
-    });
-  }
-
-  async createPermission(
-    roleId: string,
-    data: { action: string; subject: string },
-  ): Promise<RolePermission> {
-    const permission = await this.prisma.permission.create({
       data: {
-        id: ulid(),
-        name: `${data.action}_${data.subject}`,
+        name: roleDto.name,
       },
-    });
-
-    return await this.prisma.rolePermission.create({
-      data: {
-        id: ulid(),
-        roleId,
-        permissionId: permission.id,
-      },
-    });
-  }
-
-  async getPermissions(roleId: string): Promise<RolePermission[]> {
-    return await this.prisma.rolePermission.findMany({
-      where: { roleId },
-      include: { permission: true },
-    });
-  }
-
-  async removePermissionFromRole(
-    roleId: string,
-    permissionId: string,
-  ): Promise<void> {
-    await this.prisma.rolePermission.delete({
-      where: {
-        roleId_permissionId: {
-          roleId,
-          permissionId,
-        },
-      },
-    });
-  }
-
-  async assignAllPermissionsToAdmin(adminRoleId: string): Promise<void> {
-    const allPermissions = await this.prisma.permission.findMany();
-
-    for (const permission of allPermissions) {
-      await this.prisma.rolePermission.create({
-        data: {
-          id: ulid(),
-          roleId: adminRoleId,
-          permissionId: permission.id,
-        },
-      });
-    }
-  }
-
-  async assignClientPermissions(clientRoleId: string): Promise<void> {
-    const clientPermissions = [
-      'view_own_orders',
-      'create_own_orders',
-      'update_own_orders',
-      'delete_own_orders',
-      'view_own_profile',
-      'update_own_profile',
-    ];
-
-    for (const permissionName of clientPermissions) {
-      const permission = await this.prisma.permission.findUnique({
-        where: { name: permissionName },
-      });
-
-      if (permission) {
-        await this.prisma.rolePermission.create({
-          data: {
-            id: ulid(),
-            roleId: clientRoleId,
-            permissionId: permission.id,
-          },
-        });
-      }
-    }
-  }
-
-  async checkPermission(
-    accountId: string,
-    permissionName: string,
-  ): Promise<boolean> {
-    const account = await this.prisma.account.findUnique({
-      where: { id: accountId },
       include: {
-        role: {
-          include: {
-            RolePermission: {
-              include: {
-                permission: true,
-              },
-            },
-          },
-        },
+        permissions: true,
       },
     });
+  }
 
-    if (!account?.role) return false;
+  async delete(id: string): Promise<void> {
+    await this.findOne(id);
 
-    // Адміністратор має всі дозволи
-    if (account.role.type === RoleType.ADMIN) return true;
-
-    // Перевіряємо конкретний дозвіл для інших ролей
-    return account.role.RolePermission.some(
-      (rp) => rp.permission.name === permissionName,
-    );
+    try {
+      await this.prisma.role.delete({
+        where: { id },
+      });
+    } catch {
+      throw new NotFoundException('Failed to delete role');
+    }
   }
 }
